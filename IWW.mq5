@@ -32,7 +32,14 @@ void OnInit()
 {
  string Host, User, Password, Database, Socket; // database credentials
  string Ativo =Symbol();
+ string xAlgo ="ordens";
  int Port,ClientFlag;
+ string Query;
+ int    i,Cursor,Rows;
+ string xSim;
+ double xValor;
+ double xLow = iLow(Symbol(),PERIOD_M1,0);
+ double xClose = iClose(Symbol(),PERIOD_M1,0);
  
  Print (MySqlVersion());
 
@@ -56,40 +63,70 @@ void OnInit()
  
  if (DB == -1) { Print ("Connection failed! Error: "+MySqlErrorDescription); } else { Print ("Connected! DBID#",DB);}
  
- string Query;
- Query = "DROP TABLE IF EXISTS `"+Ativo+"`";
+ Query = "DROP TABLE IF EXISTS `"+Ativo+"`;";
+ Query = Query + "DROP TABLE IF EXISTS `"+xAlgo+"`";
  MySqlExecute(DB, Query);
  
- Query = "CREATE TABLE `"+Ativo+"` (time datetime, low double, close double)";
-
+ Query = "CREATE TABLE `"+Ativo+"` (time datetime, low double, close double);";
+ Query = Query + "CREATE TABLE `"+xAlgo+"` (sim int, valor double);";
+ 
+ 
  if (MySqlExecute(DB, Query))
     {
-     Print ("Tabela "+Ativo+" criada");
+     Print ("Tabela "+Ativo+" e "+xAlgo+" criada");
     }
  else
     {
-     Print ("Table `test_table` cannot be created. Error: ", MySqlErrorDescription);
+     Print ("Table "+Ativo+" ou "+xAlgo+" cannot be created. Error: ", MySqlErrorDescription);
     }
     
  while(1) {
  
- double xLow = iLow(Symbol(),PERIOD_M1,0);
- double xClose = iClose(Symbol(),PERIOD_M1,0);
- 
- if(!isNewBar()) {
-   Query = "INSERT INTO `"+Ativo+"` (time, low, close) VALUES ("+TimeToString(TimeLocal(), TIME_DATE|TIME_SECONDS)+","+xLow+","+xClose+")";
+ if(isNewBar()) {
+   Query = "INSERT INTO `"+Ativo+"` (time, low, close) VALUES ('"+TimeToString(TimeLocal(), TIME_DATE|TIME_SECONDS)+"','"+xLow+"','"+xClose+"');";
+   Print (Query);
+   if (MySqlExecute(DB, Query))
+   {
+      Print ("Registro inserido");
+      Print ("INS: Low: "+xLow+"");
+      Print ("INS: Close: "+xClose+"");
    }
+   else
+   {
+      Print ("Erro ao inserir registro de preco. Error: ", MySqlErrorDescription);
+   }
+   
+   Query = "SELECT sim, valor FROM `"+xAlgo+"`";
+   Print (Query);
+   Cursor = MySqlCursorOpen(DB, Query);
+   
+   if (Cursor >= 0)
+   {
+      Rows = MySqlCursorRows(Cursor);
+      for (i=0; i<Rows; i++)
+         if(MySqlCursorFetchRow(Cursor))
+         {
+         xSim = MySqlGetFieldAsString(Cursor, 0);
+         xValor = MySqlGetFieldAsDouble(Cursor, 1);
+         Print ("ROW[",i,"]: sim = ", xSim, ", valor = ", xValor);
+         }
+       MySqlCursorClose(Cursor);
+       }
+      else
+      {
+         Print("Erro ao abrir Cursor. Error: ", MySqlErrorDescription);
+      }
+  }
   }
  }
  
  void OnDeinit() {
- MySqlDisconnect(DB);
- ExtExpert.Deinit();
- Print ("Disconnected. Script done!");
+  MySqlDisconnect(DB);
+  ExtExpert.Deinit();
+  Print ("Disconnected. Script done!");
 }
 
-
-bool isNewBar()
+ bool isNewBar()
   {
    static datetime last_time=0;
    datetime lastbar_time=SeriesInfoInteger(Symbol(),Period(),SERIES_LASTBAR_DATE);
