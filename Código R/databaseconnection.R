@@ -1,4 +1,5 @@
-setwd("C:/Users/LAB/Desktop/Código R")
+pasta = getwd()
+setwd(pasta)
 library(RODBC)
 
 banco = "MySQL MT5"
