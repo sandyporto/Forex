@@ -5,11 +5,19 @@ library(forecast)
 library(deepnet)
 library(RSNNS)
 source("databaseconnection.R")
+dirimages = paste(getwd(),"/Results/*",sep="")
+unlink(dirimages)
 
 open = 1
 close = 2
 high = 3
 low = 4
+
+variacaonula = seq(0,0.001)
+variacaomormal = c(0.001,0.003)
+variacaomedia = c(0.003,0.1)
+variacaoalta = c(0.1,+Inf)
+
 
 typelist = c(open, close, high, low)
 minuteslist = c(1)
@@ -20,15 +28,13 @@ pteste = 0.3
 rangelist = c(1000)
 ntests = 10
 
-nrows = length(typelist)*length(minuteslist)*length(blocklist)*length(rangelist)*ntests
-ncols = 1+1+1+1+1+2
+nrows = length(typelist)*length(minuteslist)*length(blocklist)*length(rangelist)
+ncols = 1+1+1+1+2
 resultsResume = matrix(0,nrow=nrows,ncol=ncols)
-colnames(resultsResume) = c("Test","Type","Range","Minutes","Block","RMSE",
+colnames(resultsResume) = c("Type","Range","Minutes","Block","RMSE",
                             "MAE")
 
 iterator = 1
-totalErrorsMeans = matrix(0,nrow=nrows/ntests,ncol=2)
-errorIterator = 1
 for(type in typelist){
   typestring = switch(type,
                       open = "Open",
@@ -40,9 +46,9 @@ for(type in typelist){
     for(minutes in minuteslist){
       for(range in rangelist){
         errorsMeans = rep(0,2)
+        title = paste(typestring," Data, Range ",range,", Minutes ",minutes,", Block ",block,sep="")
+        details = list(col=c(2,1),main=title)
         for(test in 1:ntests){
-          title = paste("Test ",test,", ",typestring," Data, Range ",range,", Minutes ",minutes,", Block ",block,sep="")
-          details = list(col=c(2,1),main=title)
           source("forecast.R")
           errors = accuracy(forecastvalues,targets)
           if(test==1){
@@ -50,23 +56,21 @@ for(type in typelist){
           }else{
             errorsMeans = rbind(errorsMeans,as.vector(errors[2:3]))
           }
-          auxfilename=paste(getwd(),"/Results/",title,".png",sep="")
+          auxfilename=paste(getwd(),"/Results/",title,", ",toString(test),".png",sep="")
           png(filename=auxfilename)
           ts.plot(forecastvalues,targets,gpars=details)
           dev.off()
-          resultsResume[iterator,1] = test
-          resultsResume[iterator,2] = type
-          resultsResume[iterator,3] = range
-          resultsResume[iterator,4] = minutes
-          resultsResume[iterator,5] = block
-          resultsResume[iterator,6:7] = errors[2:3]
-          iterator=iterator+1
+          
         }
         cat(title,"\n")
         errorsMeans = colMeans(errorsMeans)
         print(errorsMeans)
-        totalErrorsMeans[errorIterator,] = errorsMeans
-        errorIterator = errorIterator+1
+        resultsResume[iterator,1] = type
+        resultsResume[iterator,2] = range
+        resultsResume[iterator,3] = minutes
+        resultsResume[iterator,4] = block
+        resultsResume[iterator,5:6] = errorsMeans
+        iterator=iterator+1
       }
     }
   }
