@@ -35,7 +35,7 @@ sample.ts <- function(ts,block){
   for(i in 1:nlines){
     s.ts[i,] = ts[i:(i+block)]
   }
-  s.ts = s.ts[sample.int(nrow(s.ts)),]
+  #s.ts = s.ts[sample.int(nrow(s.ts)),]
   return(s.ts)
 }
 
@@ -50,7 +50,7 @@ ci <- function(t,w,mi){
 
 gammaMemory <- function(dados,w,mi){
   linhas = nrow(dados)
-  colunas = ncol(dados)-1
+  colunas = ncol(dados)
   for (i in 1:linhas){
     for (j in 1:colunas){
       dados[i,j] = dados[i,j]*ci(colunas-j+1,w,mi)
@@ -60,5 +60,17 @@ gammaMemory <- function(dados,w,mi){
 }
 
 
+normalizarDados <- function(data){
+  maxdata = max(data)
+  mindata = min(data)
+  data = (data-mindata)/(maxdata-mindata)
+  return (data)
+}
 
+desnormalizarDados <- function(data, parNorm){
+  return(data*(parNorm[1]-parNorm[2])+parNorm[2])
+}
 
+getParNorm <- function(data){
+  return(c(max(data),min(data)))
+}
